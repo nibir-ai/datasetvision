@@ -21,9 +21,10 @@ def compute_md5(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
-def perceptual_hash(image_path: Path) -> str:
+def perceptual_hash(image_path: Path) -> int:
     """
     Compute perceptual average hash (aHash).
+    Returns a 64-bit integer instead of string.
     """
 
     with Image.open(image_path) as img:
@@ -31,13 +32,14 @@ def perceptual_hash(image_path: Path) -> str:
         pixels = np.array(img)
         avg = pixels.mean()
         diff = pixels > avg
-        return "".join(["1" if val else "0" for val in diff.flatten()])
 
-def hamming_distance(hash1: str, hash2: str) -> int:
-    """
-    Compute Hamming distance between two binary hash strings.
-    """
-    if len(hash1) != len(hash2):
-        raise ValueError("Hash lengths do not match")
+        # Convert boolean array to 64-bit integer
+        bit_string = "".join("1" if val else "0" for val in diff.flatten())
+        return int(bit_string, 2)
 
-    return sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
+
+def hamming_distance(hash1: int, hash2: int) -> int:
+    """
+    Compute Hamming distance using XOR (fast bit operation).
+    """
+    return (hash1 ^ hash2).bit_count()
