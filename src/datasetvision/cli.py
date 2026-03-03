@@ -16,6 +16,7 @@ from datasetvision.duplicates import (
 from datasetvision.stats import compute_stats
 from datasetvision.reporting import generate_markdown_report
 from datasetvision.class_analysis import analyze_class_distribution
+from datasetvision.label_noise import detect_label_noise
 
 app = typer.Typer(help="Offline dataset auditing tool.")
 
@@ -36,16 +37,12 @@ def main(
 
 @app.command()
 def scan(dataset_folder: Path) -> None:
-    """Scan dataset for integrity issues."""
-
     logger.info("Starting dataset scan")
 
     results = scan_dataset(dataset_folder)
-
     output = dataset_folder / "scan_report.json"
     save_scan_report(results, output)
 
-    logger.info("Scan completed successfully")
     typer.echo(f"Scan complete. Saved to {output}")
 
 
@@ -57,8 +54,6 @@ def duplicates(
         help="Hamming distance threshold for near-duplicate detection.",
     ),
 ) -> None:
-    """Detect duplicate images."""
-
     logger.info("Running duplicate detection")
 
     exact = find_exact_duplicates(dataset_folder)
@@ -69,8 +64,6 @@ def duplicates(
 
 @app.command()
 def stats(dataset_folder: Path) -> None:
-    """Compute dataset statistics."""
-
     logger.info("Computing dataset statistics")
 
     result = compute_stats(dataset_folder)
@@ -79,8 +72,6 @@ def stats(dataset_folder: Path) -> None:
 
 @app.command()
 def classes(dataset_folder: Path) -> None:
-    """Analyze class distribution and imbalance."""
-
     logger.info("Analyzing class distribution")
 
     result = analyze_class_distribution(dataset_folder)
@@ -88,9 +79,19 @@ def classes(dataset_folder: Path) -> None:
 
 
 @app.command()
-def report(dataset_folder: Path) -> None:
-    """Generate Markdown report."""
+def noise(dataset_folder: Path) -> None:
+    """
+    Detect potential label noise.
+    """
 
+    logger.info("Running label noise detection")
+
+    result = detect_label_noise(dataset_folder)
+    typer.echo(json.dumps(result, indent=2))
+
+
+@app.command()
+def report(dataset_folder: Path) -> None:
     logger.info("Generating Markdown report")
 
     scan_file = dataset_folder / "scan_report.json"
