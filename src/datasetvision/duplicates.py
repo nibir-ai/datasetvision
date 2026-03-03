@@ -79,3 +79,4 @@ def find_near_duplicates(
             groups.append(group)
 
     return {f"group_{i}": group for i, group in enumerate(groups)}
+
