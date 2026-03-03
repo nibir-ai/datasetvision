@@ -8,15 +8,11 @@ import typer
 import logging
 
 from datasetvision.logging_config import configure_logging
-from datasetvision.scanner import scan_dataset, save_scan_report
-from datasetvision.duplicates import (
-    find_exact_duplicates,
-    find_near_duplicates,
+from datasetvision.intelligence import (
+    generate_intelligence_report,
+    save_intelligence_json,
 )
-from datasetvision.stats import compute_stats
-from datasetvision.reporting import generate_markdown_report
-from datasetvision.class_analysis import analyze_class_distribution
-from datasetvision.label_noise import detect_label_noise
+from datasetvision.html_report import generate_html_report
 
 app = typer.Typer(help="Offline dataset auditing tool.")
 
@@ -36,71 +32,21 @@ def main(
 
 
 @app.command()
-def scan(dataset_folder: Path) -> None:
-    logger.info("Starting dataset scan")
-
-    results = scan_dataset(dataset_folder)
-    output = dataset_folder / "scan_report.json"
-    save_scan_report(results, output)
-
-    typer.echo(f"Scan complete. Saved to {output}")
-
-
-@app.command()
-def duplicates(
-    dataset_folder: Path,
-    threshold: int = typer.Option(
-        5,
-        help="Hamming distance threshold for near-duplicate detection.",
-    ),
-) -> None:
-    logger.info("Running duplicate detection")
-
-    exact = find_exact_duplicates(dataset_folder)
-    near = find_near_duplicates(dataset_folder, threshold=threshold)
-
-    typer.echo(json.dumps({"exact": exact, "near": near}, indent=2))
-
-
-@app.command()
-def stats(dataset_folder: Path) -> None:
-    logger.info("Computing dataset statistics")
-
-    result = compute_stats(dataset_folder)
-    typer.echo(json.dumps(result, indent=2))
-
-
-@app.command()
-def classes(dataset_folder: Path) -> None:
-    logger.info("Analyzing class distribution")
-
-    result = analyze_class_distribution(dataset_folder)
-    typer.echo(json.dumps(result, indent=2))
-
-
-@app.command()
-def noise(dataset_folder: Path) -> None:
+def intelligence(dataset_folder: Path) -> None:
     """
-    Detect potential label noise.
+    Run full dataset intelligence analysis.
     """
 
-    logger.info("Running label noise detection")
+    logger.info("Running full intelligence analysis")
 
-    result = detect_label_noise(dataset_folder)
-    typer.echo(json.dumps(result, indent=2))
+    report = generate_intelligence_report(dataset_folder)
 
+    json_path = dataset_folder / "intelligence_report.json"
+    html_path = dataset_folder / "intelligence_report.html"
 
-@app.command()
-def report(dataset_folder: Path) -> None:
-    logger.info("Generating Markdown report")
+    save_intelligence_json(report, json_path)
+    generate_html_report(report, html_path)
 
-    scan_file = dataset_folder / "scan_report.json"
-    if not scan_file.exists():
-        typer.echo("Run scan first.")
-        raise typer.Exit(code=1)
-
-    data = json.loads(scan_file.read_text())
-    output = dataset_folder / "report.md"
-    generate_markdown_report(data, output)
-
-    typer.echo(f"Report generated at {output}")
+    typer.echo(f"Intelligence report saved to:")
+    typer.echo(f" - {json_path}")
+    typer.echo(f" - {html_path}")
