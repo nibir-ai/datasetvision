@@ -1,5 +1,6 @@
 """
 DatasetVision CLI - Industry Dataset Governance Tool
+Premium UX + Advisory Drift Engine
 """
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.rule import Rule
 from rich.align import Align
+from rich.table import Table
 from rich import box
 
 from datasetvision.logging_config import configure_logging
@@ -33,6 +35,10 @@ logger = logging.getLogger(__name__)
 def main(verbose: bool = typer.Option(False, "--verbose", "-v")) -> None:
     configure_logging(verbose)
 
+
+# ------------------------------------------------------------
+# INTELLIGENCE COMMAND
+# ------------------------------------------------------------
 
 @app.command()
 def intelligence(dataset_folder: Path) -> None:
@@ -89,10 +95,14 @@ def intelligence(dataset_folder: Path) -> None:
     console.print()
 
 
+# ------------------------------------------------------------
+# DRIFT COMMAND
+# ------------------------------------------------------------
+
 @app.command()
 def drift(dataset_a: Path, dataset_b: Path) -> None:
     """
-    Compare two dataset versions and report drift.
+    Compare two dataset versions and report layered drift intelligence.
     """
 
     if not dataset_a.exists() or not dataset_b.exists():
@@ -103,7 +113,7 @@ def drift(dataset_a: Path, dataset_b: Path) -> None:
     console.print(
         Align.center(
             Panel(
-                "[bold cyan]DATASET DRIFT ANALYSIS[/bold cyan]",
+                "[bold cyan]DATASET DRIFT ANALYSIS[/bold cyan]\n[dim]Layered Drift Intelligence[/dim]",
                 border_style="cyan",
                 padding=(1, 6),
                 box=box.ROUNDED,
@@ -118,11 +128,36 @@ def drift(dataset_a: Path, dataset_b: Path) -> None:
     ):
         drift_report = compare_datasets(dataset_a, dataset_b)
 
-    metrics = drift_report["drift_metrics"]
+    raw = drift_report["raw_metrics"]
+    class_drift = drift_report["class_drift"]
+    global_drift = drift_report["global_drift"]
 
-    console.print(Rule("[bold cyan] DRIFT METRICS [/bold cyan]"))
+    console.print(Rule("[bold cyan] GLOBAL DRIFT SCORE [/bold cyan]"))
 
-    for key, value in metrics.items():
+    severity = global_drift["severity"]
+    score = global_drift["score"]
+
+    severity_colors = {
+        "LOW": "green",
+        "MODERATE": "yellow",
+        "HIGH": "orange1",
+        "CRITICAL": "red",
+    }
+
+    color = severity_colors.get(severity, "white")
+
+    console.print(
+        Panel(
+            f"[bold {color}]{severity}[/bold {color}]\n"
+            f"[dim]Drift Score:[/dim] {score}",
+            border_style=color,
+            box=box.ROUNDED,
+        )
+    )
+
+    console.print(Rule("[bold cyan] RAW METRICS [/bold cyan]"))
+
+    for key, value in raw.items():
         if isinstance(value, bool):
             color = "red" if value else "green"
             console.print(f"[{color}]{key}: {value}[/{color}]")
@@ -134,4 +169,31 @@ def drift(dataset_a: Path, dataset_b: Path) -> None:
             else:
                 console.print(f"{key}: {value}")
 
+    console.print(Rule("[bold cyan] PER-CLASS DRIFT [/bold cyan]"))
+
+    table = Table(box=box.SIMPLE_HEAVY)
+    table.add_column("Class", style="cyan")
+    table.add_column("Old")
+    table.add_column("New")
+    table.add_column("Δ")
+    table.add_column("%Δ")
+    table.add_column("Severity")
+
+    for cls, stats in class_drift.items():
+        severity_color = {
+            "LOW": "green",
+            "MODERATE": "yellow",
+            "HIGH": "red",
+        }.get(stats["severity"], "white")
+
+        table.add_row(
+            cls,
+            str(stats["old_count"]),
+            str(stats["new_count"]),
+            str(stats["delta"]),
+            f"{stats['percent_change']}%",
+            f"[{severity_color}]{stats['severity']}[/{severity_color}]",
+        )
+
+    console.print(table)
     console.print()
