@@ -32,3 +32,12 @@ def perceptual_hash(image_path: Path) -> str:
         avg = pixels.mean()
         diff = pixels > avg
         return "".join(["1" if val else "0" for val in diff.flatten()])
+
+def hamming_distance(hash1: str, hash2: str) -> int:
+    """
+    Compute Hamming distance between two binary hash strings.
+    """
+    if len(hash1) != len(hash2):
+        raise ValueError("Hash lengths do not match")
+
+    return sum(c1 != c2 for c1, c2 in zip(hash1, hash2))
