@@ -164,3 +164,4 @@ def intelligence(
     console.print(f"[green]JSON →[/green] {json_path}")
     console.print(f"[green]HTML →[/green] {html_path}")
     console.print()
+
