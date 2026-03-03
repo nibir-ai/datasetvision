@@ -1,5 +1,5 @@
 """
-DatasetVision CLI - Premium Dataset Governance Interface
+DatasetVision CLI - Industry-Grade Dataset Governance Tool
 """
 
 from pathlib import Path
@@ -22,8 +22,9 @@ from datasetvision.intelligence import (
     save_intelligence_json,
 )
 from datasetvision.html_report import generate_html_report
+from datasetvision.policy import evaluate_policies
 
-app = typer.Typer(help="DatasetVision - Research-Grade Dataset Governance CLI.")
+app = typer.Typer(help="DatasetVision - Industry Dataset Governance CLI.")
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -37,9 +38,6 @@ def main(
 
 
 def render_gradient_bar(value: int, max_value: int, width: int = 32) -> Text:
-    """
-    Render smooth gradient-style proportional bar.
-    """
     if max_value == 0:
         return Text("")
 
@@ -56,9 +54,6 @@ def render_gradient_bar(value: int, max_value: int, width: int = 32) -> Text:
 
 
 def severity_meter(score: int) -> Panel:
-    """
-    Visual severity meter.
-    """
     levels = {
         0: ("BALANCED", "green"),
         1: ("MILD", "yellow"),
@@ -96,7 +91,7 @@ def intelligence(
     console.print(
         Align.center(
             Panel(
-                "[bold cyan]DATASETVISION[/bold cyan]\n[dim]Dataset Governance Intelligence[/dim]",
+                "[bold cyan]DATASETVISION[/bold cyan]\n[dim]Industry Dataset Governance Framework[/dim]",
                 border_style="cyan",
                 padding=(1, 6),
                 box=box.ROUNDED,
@@ -112,6 +107,9 @@ def intelligence(
         progress.add_task("analysis", total=None)
         report = generate_intelligence_report(dataset_folder)
 
+    # Governance Enforcement
+    policy_result = evaluate_policies(report)
+
     json_path = dataset_folder / "intelligence_report.json"
     html_path = dataset_folder / "intelligence_report.html"
 
@@ -120,12 +118,13 @@ def intelligence(
 
     if json_output:
         console.print_json(data=report)
+        if not policy_result["policy_passed"]:
+            raise typer.Exit(code=1)
         return
 
     class_info = report["class_analysis"]
     imbalance = class_info.get("imbalance", {})
     noise_info = report["label_noise"]
-    similarity = report["similarity_matrix"]
 
     console.print(Rule("[bold cyan] OVERVIEW [/bold cyan]"))
 
@@ -147,61 +146,19 @@ def intelligence(
 
     console.print(overview)
 
-    console.print(Rule("[bold cyan] CLASS DISTRIBUTION [/bold cyan]"))
-
-    max_count = max(stats["count"] for stats in class_info["classes"].values())
-    table = Table(box=box.SIMPLE_HEAVY)
-    table.add_column("Class", style="cyan")
-    table.add_column("Distribution")
-    table.add_column("Count", justify="right")
-
-    for cls, stats in class_info["classes"].items():
-        table.add_row(
-            cls,
-            render_gradient_bar(stats["count"], max_count),
-            f"[bold]{stats['count']}[/bold]",
-        )
-
-    console.print(table)
-
     console.print(Rule("[bold cyan] IMBALANCE [/bold cyan]"))
     console.print(severity_meter(imbalance.get("severity_score", 0)))
 
-    console.print(Rule("[bold cyan] LABEL NOISE [/bold cyan]"))
+    console.print(Rule("[bold cyan] GOVERNANCE STATUS [/bold cyan]"))
 
-    if noise_info["num_suspicious"] == 0:
-        console.print("[bold green]✓ Dataset appears clean.[/bold green]")
+    if policy_result["policy_passed"]:
+        console.print("[bold green]✓ All governance policies passed.[/bold green]")
     else:
-        console.print(
-            f"[bold red]⚠ {noise_info['num_suspicious']} potential mislabels detected.[/bold red]"
-        )
+        console.print("[bold red]✖ Governance violations detected:[/bold red]")
+        for violation in policy_result["violations"]:
+            console.print(f"[red]  - {violation}[/red]")
 
-    console.print(Rule("[bold cyan] SIMILARITY MATRIX [/bold cyan]"))
-
-    sim_table = Table(box=box.MINIMAL_DOUBLE_HEAD)
-    classes = list(similarity.keys())
-    sim_table.add_column("")
-
-    for cls in classes:
-        sim_table.add_column(cls, justify="center")
-
-    for cls_a in classes:
-        row = [f"[cyan]{cls_a}[/cyan]"]
-        for cls_b in classes:
-            val = similarity[cls_a][cls_b]
-            if val is None:
-                row.append("-")
-            else:
-                if val < 10:
-                    style = "green"
-                elif val < 20:
-                    style = "yellow"
-                else:
-                    style = "red"
-                row.append(f"[{style}]{round(val,1)}[/{style}]")
-        sim_table.add_row(*row)
-
-    console.print(sim_table)
+        raise typer.Exit(code=1)
 
     console.print(Rule("[bold cyan] OUTPUT [/bold cyan]"))
     console.print(f"[green]JSON →[/green] {json_path}")
