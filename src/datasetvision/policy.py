@@ -27,3 +27,4 @@ def evaluate_policies(report: Dict[str, Any]) -> Dict[str, Any]:
         "violations": violations,
         "policy_passed": len(violations) == 0,
     }
+
