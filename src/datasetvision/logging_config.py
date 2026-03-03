@@ -7,12 +7,21 @@ import logging
 
 def configure_logging(verbose: bool = False) -> None:
     """
-    Configure application-wide logging.
+    Configure logging behavior.
     """
 
-    level = logging.DEBUG if verbose else logging.INFO
+    root = logging.getLogger()
 
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
+    # Clear existing handlers
+    if root.hasHandlers():
+        root.handlers.clear()
+
+    if verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        )
+    else:
+        logging.basicConfig(
+            level=logging.WARNING,
+        )
