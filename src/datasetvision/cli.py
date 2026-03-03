@@ -50,3 +50,4 @@ def intelligence(dataset_folder: Path) -> None:
     typer.echo(f"Intelligence report saved to:")
     typer.echo(f" - {json_path}")
     typer.echo(f" - {html_path}")
+
