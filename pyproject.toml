@@ -1,7 +1,7 @@
 [project]
 name = "datasetvision"
-version = "0.1.0"
-description = "Offline computer vision dataset auditing CLI tool"
+version = "0.2.0"
+description = "Research-grade dataset governance CLI for computer vision"
 authors = [{ name="Nibir Biswas", email="nibir.github@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,7 +9,8 @@ dependencies = [
     "typer>=0.9.0",
     "opencv-python>=4.8.0",
     "Pillow>=10.0.0",
-    "numpy>=1.24.0"
+    "numpy>=1.24.0",
+    "rich>=13.0.0"
 ]
 
 [project.optional-dependencies]
