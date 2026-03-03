@@ -1,23 +1,17 @@
 """
 Advanced class-level anomaly detection using feature embeddings.
-CPU-only, offline, statistical modeling.
+Also computes embedding centroid for drift analysis.
 """
 
 from pathlib import Path
 from typing import Dict, Any, List
 import numpy as np
 import cv2
-import statistics
 
 from datasetvision.utils import get_image_files
 
 
 def _compute_embedding(image_path: Path) -> np.ndarray:
-    """
-    Compute lightweight image embedding using
-    32x32 grayscale normalized pixel vector.
-    """
-
     img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
 
     if img is None:
@@ -26,7 +20,6 @@ def _compute_embedding(image_path: Path) -> np.ndarray:
     resized = cv2.resize(img, (32, 32))
     vector = resized.flatten().astype(np.float32)
 
-    # Normalize
     norm = np.linalg.norm(vector)
     if norm == 0:
         return vector
@@ -38,9 +31,6 @@ def analyze_class_anomalies(
     dataset_path: Path,
     z_threshold: float = 2.5,
 ) -> Dict[str, Any]:
-    """
-    Detect intra-class anomalies using embedding-based z-score modeling.
-    """
 
     class_dirs = [d for d in dataset_path.iterdir() if d.is_dir()]
     results: Dict[str, Any] = {}
@@ -49,7 +39,6 @@ def analyze_class_anomalies(
         image_files = list(get_image_files(class_dir))
 
         if len(image_files) < 5:
-            # Too few samples for reliable stats
             continue
 
         embeddings: List[np.ndarray] = []
@@ -67,7 +56,6 @@ def analyze_class_anomalies(
             continue
 
         matrix = np.vstack(embeddings)
-
         centroid = np.mean(matrix, axis=0)
 
         distances = np.linalg.norm(matrix - centroid, axis=1)
@@ -103,6 +91,7 @@ def analyze_class_anomalies(
             "outlier_count": len(outliers),
             "total_images": len(valid_paths),
             "severity": severity,
+            "centroid": centroid.tolist(),  # ← Important
             "outliers": outliers,
         }
 
