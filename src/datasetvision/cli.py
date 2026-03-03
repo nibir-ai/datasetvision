@@ -15,6 +15,7 @@ from datasetvision.duplicates import (
 )
 from datasetvision.stats import compute_stats
 from datasetvision.reporting import generate_markdown_report
+from datasetvision.class_analysis import analyze_class_distribution
 
 app = typer.Typer(help="Offline dataset auditing tool.")
 
@@ -30,9 +31,6 @@ def main(
         help="Enable verbose logging.",
     ),
 ) -> None:
-    """
-    Global CLI configuration.
-    """
     configure_logging(verbose)
 
 
@@ -76,6 +74,16 @@ def stats(dataset_folder: Path) -> None:
     logger.info("Computing dataset statistics")
 
     result = compute_stats(dataset_folder)
+    typer.echo(json.dumps(result, indent=2))
+
+
+@app.command()
+def classes(dataset_folder: Path) -> None:
+    """Analyze class distribution and imbalance."""
+
+    logger.info("Analyzing class distribution")
+
+    result = analyze_class_distribution(dataset_folder)
     typer.echo(json.dumps(result, indent=2))
 
 
