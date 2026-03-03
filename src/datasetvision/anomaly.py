@@ -1,19 +1,45 @@
 """
-Class-level anomaly detection engine.
-Uses perceptual hash statistical modeling.
+Advanced class-level anomaly detection using feature embeddings.
+CPU-only, offline, statistical modeling.
 """
 
 from pathlib import Path
 from typing import Dict, Any, List
+import numpy as np
+import cv2
 import statistics
 
-from datasetvision.hashing import perceptual_hash, hamming_distance
 from datasetvision.utils import get_image_files
 
 
-def analyze_class_anomalies(dataset_path: Path, sigma: float = 2.0) -> Dict[str, Any]:
+def _compute_embedding(image_path: Path) -> np.ndarray:
     """
-    Detect intra-class anomalies using perceptual hash distance statistics.
+    Compute lightweight image embedding using
+    32x32 grayscale normalized pixel vector.
+    """
+
+    img = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+
+    if img is None:
+        raise ValueError(f"Unreadable image: {image_path}")
+
+    resized = cv2.resize(img, (32, 32))
+    vector = resized.flatten().astype(np.float32)
+
+    # Normalize
+    norm = np.linalg.norm(vector)
+    if norm == 0:
+        return vector
+
+    return vector / norm
+
+
+def analyze_class_anomalies(
+    dataset_path: Path,
+    z_threshold: float = 2.5,
+) -> Dict[str, Any]:
+    """
+    Detect intra-class anomalies using embedding-based z-score modeling.
     """
 
     class_dirs = [d for d in dataset_path.iterdir() if d.is_dir()]
@@ -22,41 +48,45 @@ def analyze_class_anomalies(dataset_path: Path, sigma: float = 2.0) -> Dict[str,
     for class_dir in class_dirs:
         image_files = list(get_image_files(class_dir))
 
-        if len(image_files) < 3:
-            # Not enough samples for statistical modeling
+        if len(image_files) < 5:
+            # Too few samples for reliable stats
             continue
 
-        hashes = [perceptual_hash(p) for p in image_files]
+        embeddings: List[np.ndarray] = []
+        valid_paths: List[Path] = []
 
-        # Compute centroid (mean hash as bitwise majority vote)
-        bit_length = 64
-        centroid_bits = []
+        for img_path in image_files:
+            try:
+                emb = _compute_embedding(img_path)
+                embeddings.append(emb)
+                valid_paths.append(img_path)
+            except Exception:
+                continue
 
-        for bit in range(bit_length):
-            ones = sum((h >> bit) & 1 for h in hashes)
-            centroid_bits.append(1 if ones > len(hashes) / 2 else 0)
+        if len(embeddings) < 5:
+            continue
 
-        centroid = 0
-        for i, bit in enumerate(centroid_bits):
-            centroid |= (bit << i)
+        matrix = np.vstack(embeddings)
 
-        distances: List[int] = [
-            hamming_distance(h, centroid) for h in hashes
-        ]
+        centroid = np.mean(matrix, axis=0)
 
-        mean_dist = statistics.mean(distances)
-        std_dist = statistics.stdev(distances)
+        distances = np.linalg.norm(matrix - centroid, axis=1)
 
-        threshold = mean_dist + sigma * std_dist
+        mean_dist = float(np.mean(distances))
+        std_dist = float(np.std(distances))
+
+        if std_dist == 0:
+            continue
+
+        z_scores = (distances - mean_dist) / std_dist
 
         outliers = [
-            str(image_files[i])
-            for i, d in enumerate(distances)
-            if d > threshold
+            str(valid_paths[i])
+            for i, z in enumerate(z_scores)
+            if abs(z) > z_threshold
         ]
 
-        total = len(image_files)
-        outlier_ratio = len(outliers) / total
+        outlier_ratio = len(outliers) / len(valid_paths)
 
         if outlier_ratio == 0:
             severity = "HEALTHY"
@@ -68,11 +98,10 @@ def analyze_class_anomalies(dataset_path: Path, sigma: float = 2.0) -> Dict[str,
             severity = "SEVERE"
 
         results[class_dir.name] = {
-            "mean_distance": round(mean_dist, 3),
-            "std_distance": round(std_dist, 3),
-            "variance": round(statistics.variance(distances), 3),
+            "mean_distance": round(mean_dist, 4),
+            "std_distance": round(std_dist, 4),
             "outlier_count": len(outliers),
-            "total_images": total,
+            "total_images": len(valid_paths),
             "severity": severity,
             "outliers": outliers,
         }
