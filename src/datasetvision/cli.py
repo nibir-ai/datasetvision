@@ -28,8 +28,13 @@ def main(verbose: bool = typer.Option(False, "--verbose", "-v")):
     configure_logging(verbose)
 
 
+# ------------------------------------------------------------
+# INTELLIGENCE
+# ------------------------------------------------------------
+
 @app.command()
 def intelligence(dataset_folder: Path):
+
     if not dataset_folder.exists():
         console.print("[red]Dataset folder does not exist.[/red]")
         raise typer.Exit(code=1)
@@ -38,8 +43,8 @@ def intelligence(dataset_folder: Path):
         Align.center(
             Panel(
                 "[bold cyan]DATASETVISION[/bold cyan]\n[dim]Anomaly-Aware Intelligence[/dim]",
-                box=box.ROUNDED,
                 border_style="cyan",
+                box=box.ROUNDED,
             )
         )
     )
@@ -57,35 +62,41 @@ def intelligence(dataset_folder: Path):
 
     if not anomalies:
         console.print("[green]No anomaly data available.[/green]")
-    else:
-        table = Table(box=box.SIMPLE_HEAVY)
-        table.add_column("Class", style="cyan")
-        table.add_column("Outliers")
-        table.add_column("Total")
-        table.add_column("Severity")
+        return
 
-        for cls, stats in anomalies.items():
-            severity_color = {
-                "HEALTHY": "green",
-                "MILD": "yellow",
-                "MODERATE": "orange1",
-                "SEVERE": "red",
-            }.get(stats["severity"], "white")
+    table = Table(box=box.SIMPLE_HEAVY)
+    table.add_column("Class", style="cyan")
+    table.add_column("Outliers")
+    table.add_column("Total")
+    table.add_column("Severity")
 
-            table.add_row(
-                cls,
-                str(stats["outlier_count"]),
-                str(stats["total_images"]),
-                f"[{severity_color}]{stats['severity']}[/{severity_color}]",
-            )
+    for cls, stats in anomalies.items():
 
-        console.print(table)
+        severity_color = {
+            "HEALTHY": "green",
+            "MILD": "yellow",
+            "MODERATE": "orange1",
+            "SEVERE": "red",
+        }.get(stats["severity"], "white")
 
+        table.add_row(
+            cls,
+            str(stats["outlier_count"]),
+            str(stats["total_images"]),
+            f"[{severity_color}]{stats['severity']}[/{severity_color}]",
+        )
+
+    console.print(table)
     console.print()
 
 
+# ------------------------------------------------------------
+# DRIFT
+# ------------------------------------------------------------
+
 @app.command()
 def drift(dataset_a: Path, dataset_b: Path):
+
     if not dataset_a.exists() or not dataset_b.exists():
         console.print("[red]Dataset paths invalid.[/red]")
         raise typer.Exit(code=1)
@@ -94,8 +105,8 @@ def drift(dataset_a: Path, dataset_b: Path):
         Align.center(
             Panel(
                 "[bold cyan]DATASET DRIFT ANALYSIS[/bold cyan]",
-                box=box.ROUNDED,
                 border_style="cyan",
+                box=box.ROUNDED,
             )
         )
     )
@@ -109,13 +120,58 @@ def drift(dataset_a: Path, dataset_b: Path):
 
     global_drift = drift_report["global_drift"]
     anomaly_drift = drift_report["anomaly_drift"]
+    centroid_drift = drift_report["centroid_drift"]
+
+    # ------------------------------------------------------------
+    # GLOBAL DRIFT
+    # ------------------------------------------------------------
 
     console.print(Rule("[bold cyan] GLOBAL DRIFT [/bold cyan]"))
     console.print(
         f"[bold]{global_drift['severity']}[/bold] (score={global_drift['score']})"
     )
 
+    # ------------------------------------------------------------
+    # SEMANTIC DRIFT (NEW)
+    # ------------------------------------------------------------
+
+    console.print(Rule("[bold cyan] SEMANTIC DRIFT [/bold cyan]"))
+
+    if not centroid_drift:
+        console.print("[green]No centroid drift detected.[/green]")
+    else:
+
+        table = Table(box=box.SIMPLE_HEAVY)
+        table.add_column("Class", style="cyan")
+        table.add_column("Centroid Distance")
+        table.add_column("Severity")
+
+        for cls, stats in centroid_drift.items():
+
+            severity_color = {
+                "STABLE": "green",
+                "MINOR_SHIFT": "yellow",
+                "MODERATE_SHIFT": "orange1",
+                "MAJOR_SHIFT": "red",
+            }.get(stats["severity"], "white")
+
+            table.add_row(
+                cls,
+                str(stats["centroid_distance"]),
+                f"[{severity_color}]{stats['severity']}[/{severity_color}]",
+            )
+
+        console.print(table)
+
+    # ------------------------------------------------------------
+    # ANOMALY DRIFT
+    # ------------------------------------------------------------
+
     console.print(Rule("[bold cyan] ANOMALY DRIFT [/bold cyan]"))
+
+    if not anomaly_drift:
+        console.print("[green]No anomaly changes detected.[/green]")
+        return
 
     table = Table(box=box.SIMPLE_HEAVY)
     table.add_column("Class", style="cyan")
@@ -125,6 +181,7 @@ def drift(dataset_a: Path, dataset_b: Path):
     table.add_column("Severity")
 
     for cls, stats in anomaly_drift.items():
+
         severity_color = {
             "STABLE": "green",
             "INCREASE": "yellow",
