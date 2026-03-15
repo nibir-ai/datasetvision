@@ -1,6 +1,6 @@
 [project]
 name = "datasetvision"
-version = "0.3.0"
+version = "0.3.1"
 description = "Industry-grade dataset governance CLI for computer vision"
 authors = [{ name="Nibir Biswas", email="nibir.github@gmail.com" }]
 readme = "README.md"

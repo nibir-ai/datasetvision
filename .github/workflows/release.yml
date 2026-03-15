@@ -38,4 +38,8 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: |
-          echo "Packaging for GitHub is usually done via Docker or a separate repo, but for PyPI-like packages on GitHub, we can upload assets to the release."
+          pip install twine
+          export TWINE_USERNAME=${{ github.actor }}
+          export TWINE_PASSWORD=${{ secrets.GITHUB_TOKEN }}
+          export TWINE_REPOSITORY_URL=https://pypi.pkg.github.com/${{ github.repository }}
+          twine upload --skip-existing dist/*
