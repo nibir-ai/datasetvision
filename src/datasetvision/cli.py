@@ -17,6 +17,10 @@ from rich import box
 from datasetvision.logging_config import configure_logging
 from datasetvision.intelligence import generate_intelligence_report
 from datasetvision.drift import compare_datasets
+from datasetvision.scanner import scan_dataset, save_scan_report
+from datasetvision.duplicates import find_exact_duplicates, find_near_duplicates
+from datasetvision.policy import evaluate_policies
+from datasetvision.html_report import generate_html_report
 
 app = typer.Typer()
 console = Console()
@@ -87,6 +91,17 @@ def intelligence(dataset_folder: Path):
         )
 
     console.print(table)
+    console.print()
+    
+    console.print(Rule("[bold cyan] GOVERNANCE POLICIES [/bold cyan]"))
+    policy_results = evaluate_policies(report)
+    
+    if policy_results["policy_passed"]:
+        console.print("[bold green]All governance policies passed![/bold green]")
+    else:
+        console.print("[bold red]Policy Violations:[/bold red]")
+        for violation in policy_results["violations"]:
+            console.print(f"- [red]{violation}[/red]")
     console.print()
 
 
@@ -199,3 +214,82 @@ def drift(dataset_a: Path, dataset_b: Path):
 
     console.print(table)
     console.print()
+
+# ------------------------------------------------------------
+# SCANNER
+# ------------------------------------------------------------
+
+@app.command()
+def scan(dataset_folder: Path, output: Path = typer.Option(None, "--output", "-o")):
+    if not dataset_folder.exists():
+        console.print("[red]Dataset folder does not exist.[/red]")
+        raise typer.Exit(code=1)
+    
+    console.print(Rule("[bold cyan] DATASET SCAN [/bold cyan]"))
+    
+    with Progress(SpinnerColumn(), TextColumn("[bold]Scanning dataset..."), console=console) as progress:
+        results = scan_dataset(dataset_folder)
+    
+    console.print(f"Total Images: {results['total_images']}")
+    console.print(f"Corrupted: {len(results['corrupted'])}")
+    console.print(f"Blank: {len(results['blank'])}")
+    console.print(f"Extreme Aspect Ratio: {len(results['extreme_aspect_ratio'])}")
+    
+    if output:
+        save_scan_report(results, output)
+        console.print(f"[green]Scan report saved to {output}[/green]")
+
+
+# ------------------------------------------------------------
+# DUPLICATES
+# ------------------------------------------------------------
+
+@app.command()
+def duplicates(dataset_folder: Path, exact: bool = typer.Option(True, "--exact/--near", help="Find exact or near duplicates")):
+    if not dataset_folder.exists():
+        console.print("[red]Dataset folder does not exist.[/red]")
+        raise typer.Exit(code=1)
+    
+    console.print(Rule(f"[bold cyan] {'EXACT' if exact else 'NEAR'} DUPLICATES [/bold cyan]"))
+    
+    with Progress(SpinnerColumn(), TextColumn("[bold]Finding duplicates..."), console=console) as progress:
+        if exact:
+            results = find_exact_duplicates(dataset_folder)
+        else:
+            results = find_near_duplicates(dataset_folder)
+    
+    if not results:
+        console.print("[green]No duplicates found![/green]")
+        return
+        
+    for k, v in results.items():
+        console.print(f"[bold yellow]Group[/bold yellow] (size {len(v)}):\n  " + "\n  ".join(map(str, v)))
+    console.print()
+
+
+# ------------------------------------------------------------
+# HTML REPORT
+# ------------------------------------------------------------
+
+@app.command()
+def report(dataset_folder: Path, output: Path):
+    if not dataset_folder.exists():
+        console.print("[red]Dataset folder does not exist.[/red]")
+        raise typer.Exit(code=1)
+        
+    console.print(
+        Align.center(
+            Panel(
+                "[bold cyan]HTML REPORT GENERATION[/bold cyan]",
+                border_style="cyan",
+                box=box.ROUNDED,
+            )
+        )
+    )
+        
+    with Progress(SpinnerColumn(), TextColumn("[bold]Generating HTML report..."), console=console) as progress:
+        report_data = generate_intelligence_report(dataset_folder)
+        generate_html_report(report_data, output)
+        
+    console.print(f"[green]HTML report successfully generated at {output}[/green]")
+

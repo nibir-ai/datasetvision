@@ -30,8 +30,8 @@ def generate_html_report(report: Dict[str, Any], output_path: Path) -> None:
         <h2>Label Noise</h2>
         <pre>{report['label_noise']}</pre>
 
-        <h2>Similarity Matrix</h2>
-        <pre>{report['similarity_matrix']}</pre>
+        <h2>Class Anomalies</h2>
+        <pre>{report.get('class_anomalies', 'N/A')}</pre>
     </body>
     </html>
     """
