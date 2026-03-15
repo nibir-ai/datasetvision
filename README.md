@@ -112,9 +112,18 @@ graph TD;
 
 ---
 
+## 🔗 Project Links
+
+- 📜 **[License](file:///home/nibir/datasetvision/LICENSE)**: MIT
+- 📚 **[Changelog](file:///home/nibir/datasetvision/CHANGELOG.md)**: Track our progress
+- 🤝 **[Contributing](file:///home/nibir/datasetvision/CONTRIBUTING.md)**: Help us grow
+- ⚖️ **[Code of Conduct](file:///home/nibir/datasetvision/CODE_OF_CONDUCT.md)**: Our community commitment
+
+---
+
 ## 🤝 Contributing
 
-We welcome pull requests! For major changes, please open an issue first to discuss what you would like to change.
+We welcome pull requests! Please read our **[Contributing Guidelines](file:///home/nibir/datasetvision/CONTRIBUTING.md)** before submitting.
 
 1. Fork the repo.
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`).

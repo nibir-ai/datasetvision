@@ -13,6 +13,21 @@ dependencies = [
     "rich>=13.0.0",
     "PyYAML>=6.0"
 ]
+keywords = ["computer-vision", "data-governance", "dataset-drift", "anomaly-detection", "mlops"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/nibir-ai/datasetvision"
+Repository = "https://github.com/nibir-ai/datasetvision.git"
+Tracker = "https://github.com/nibir-ai/datasetvision/issues"
 
 [project.optional-dependencies]
 dev = [
